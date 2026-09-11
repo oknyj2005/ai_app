@@ -104,8 +104,8 @@ class AIClient:
 
                 # 去掉 "data: " 前缀
                 line = line.decode('utf-8')
-                if line.startswith("data: "):
-                    line = line[6:]
+                if line.startswith("data:"):
+                    line = line[5:].strip()
 
                 # 流结束标志
                 if line == "[DONE]":
@@ -121,11 +121,14 @@ class AIClient:
                 except (json.JSONDecodeError, KeyError, IndexError):
                     continue
 
-            # 把完整回复加入历史
-            self.history.append({"role": "assistant", "content": full_reply})
-
         except requests.exceptions.RequestException as e:
-            yield f"❌ 请求失败: {e}"
+            full_reply = f"❌ 请求失败: {e}"
+            yield full_reply
+        finally:
+            # 不管成功还是失败都要补上 assistant 消息，
+            # 否则 history 里会留下一条没有回复的 user 消息，
+            # 之后每一轮请求的 user/assistant 配对都会错位
+            self.history.append({"role": "assistant", "content": full_reply})
 
     def clear_history(self):
         """清空对话历史"""
